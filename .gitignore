@@ -1,0 +1,21 @@
+# CMake build directories
+build/
+out/
+bin/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# VS Code workspace settings
+.vscode/
+
+# Compiled object files and binaries (in case they leak outside the build folder)
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
