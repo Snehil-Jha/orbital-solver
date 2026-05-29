@@ -5,6 +5,7 @@
 #include <functional>
 #include <stdexcept>
 #include <limits>
+#include <cmath>
 
 #include "matrix.h"
 #include "vector.h"
@@ -63,14 +64,11 @@ void bisect(
             }
         }
 
-        // if(x_upper > result[k])
-        //     x_upper = result[k];
-
         double x_mid;
         for(int iter_count = 0; iter_count < max_iter; iter_count++)
         {
             x_mid = 0.5 * (x_upper + x_lower);
-            if(x_upper - x_lower < epsilon * std::abs(x_mid)) break;
+            if(x_upper - x_lower < epsilon * std::max(1., std::abs(x_mid))) break;
 
             // sturms sequence
             int a = 0;
@@ -102,7 +100,7 @@ void bisect(
     }
 }
 
-void lanczos_get_tridiagonal(
+int lanczos_get_tridiagonal(
     const std::function<void(
         const Matrix<std::complex<double>>& state, int col, Vector<std::complex<double>>& out
     )>& H,
@@ -117,7 +115,7 @@ void lanczos_get_tridiagonal(
     int N = Q.row_count();
     int m = T_main.length();
 
-    if(T_sub.length() != m - 1 || Q.col_count() != m + 1)
+    if(T_sub.length() != m - 1 || Q.col_count() != m)
         throw std::invalid_argument("Provided matrices not of appropriate shape.");
 
     // generate the random vector
@@ -127,14 +125,14 @@ void lanczos_get_tridiagonal(
         double real = dis(gen);
         double imag = dis(gen);
 
-        Q[j, 1] = std::complex<double>(real, imag);
+        Q[j, 0] = std::complex<double>(real, imag);
         sq_sum += real * real + imag * imag;
     }
 
     double normalization = 1 / sqrt(sq_sum);
     for(int j = 0; j < N; j++)
     {
-        Q[j, 1] *= normalization;
+        Q[j, 0] *= normalization;
     }
 
     double beta_old = 0;
@@ -142,15 +140,18 @@ void lanczos_get_tridiagonal(
     auto w = Vector<std::complex<double>>(N);
 
     // iteration loop
-    for(int j = 1; j <= m; j++)
+    for(int j = 0; j < m; j++)
     {
         // inital vector
         H(Q, j, w);
 
-        // primary orthogonalization, with raw loops for
-        for(int i = 0; i < N; i++)
+        // primary orthogonalization, with raw loops for speed
+        if(j != 0)
         {
-            w[i] = w[i] - beta_old * Q[i, j-1];
+            for(int i = 0; i < N; i++)
+            {
+                w[i] = w[i] - beta_old * Q[i, j-1];
+            }
         }
 
         std::complex<double> alpha_j = Q.col_inner_product(j, w);
@@ -161,9 +162,8 @@ void lanczos_get_tridiagonal(
         }
 
         // full reorthogonalization, again with raw loops
-        for(int k = 1; k <= j; k++)
+        for(int k = 0; k < j; k++)
         {
-
             std::complex<double> inner = Q.col_inner_product(k, w); 
             
             for(int i = 0; i < N; i++)
@@ -175,17 +175,18 @@ void lanczos_get_tridiagonal(
         // normalize and store
         beta_old = sqrt(std::real(Vector<std::complex<double>>::complex_inner(w, w)));
         
-        T_main[j - 1] = std::real(alpha_j); // main diagonal
-        if(j != m)
+        T_main[j] = std::real(alpha_j); // main diagonal
+        if(j < m-1)
         {
-            T_sub[j-1] = beta_old;
-            T_sub[j-1] = beta_old;
+            T_sub[j] = beta_old;
         }
 
         if(beta_old < epsilon)
-            break;
+        {
+            return j + 1;
+        }
 
-        if(j < m)
+        if(j < m-1)
         {
             for(int i = 0; i < N; i++)
             {
@@ -193,4 +194,6 @@ void lanczos_get_tridiagonal(
             }
         }
     }
+
+    return m;
 }

@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include "vector.h"
 #include "matrix.h"
@@ -5,10 +6,12 @@
 
 using namespace std;
 
-#define dx 0.001
-#define dx_inv 1000.
-#define x0 -10.
-#define N 20000
+#define dx 0.0001220703125
+#define dx_inv 8192.
+#define x0 -4.
+#define N 65536
+
+#define m 50
 
 void H(const Matrix<std::complex<double>>& state, int col, Vector<std::complex<double>>& out)
 {
@@ -19,8 +22,8 @@ void H(const Matrix<std::complex<double>>& state, int col, Vector<std::complex<d
     {
         x = x0 + i * dx;
 
-        // harmonic
-        potential = (abs(x) < 5) ? 0 : 100;
+        // square well
+        potential = (abs(x) < 0.5) ? 0. : 100;
 
         if(i == 0)
         {
@@ -43,17 +46,15 @@ int main()
 {
     cout << "Starting sim" << endl;
 
-    int m = 100;
     auto T_main = Vector<double>(m);
     auto T_sub = Vector<double>(m - 1);
-    auto Q = Matrix<std::complex<double>>(N, m + 1);
+    auto Q = Matrix<std::complex<double>>(N, m);
 
     cout << "Initialized values" << endl;
 
     lanczos_get_tridiagonal(H, T_main, T_sub, Q);
 
     cout << "Done lanczos." << endl;
-    
     
     auto result = Vector<double>(m);
 

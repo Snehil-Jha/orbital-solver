@@ -30,10 +30,12 @@ void bisect(
  * 
  * @param H function which applies the hermitian matrix on the specified column
  * @param T stores the tridiagonal matrix (m × m). Must be all zeros at the start
- * @param Q stores the recurrence vectors (N × m+1). Must be all zeros at the start
+ * @param Q stores the recurrence vectors (N × m). Must be all zeros at the start
  * @param epsilon numerical precision for stopping
+ *
+ * @return the number of iterations performed by the loop, typically m, but may be less
  */
-void lanczos_get_tridiagonal(
+int lanczos_get_tridiagonal(
     const std::function<void(
         const Matrix<std::complex<double>>& state, int col, Vector<std::complex<double>>& out
     )>& H,
