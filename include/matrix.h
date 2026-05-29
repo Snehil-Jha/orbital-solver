@@ -70,6 +70,15 @@ public:
         return *this;
     }
 
+    int row_count()
+    {
+        return m;
+    }
+    int col_count()
+    {
+        return n;
+    }
+
     // Column-major storing of data, for cache optimization
     T& at(int i, int j)
     {

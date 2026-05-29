@@ -19,6 +19,13 @@ public:
         data = new T[n]();
     }
 
+    Vector(int n, const T& val): size(n)
+    {
+        data = new T[n];
+
+        for(int i = 0; i < n; i++) data[i] = val;
+    }
+
     Vector(const Vector& other): size(other.size)
     {
         data = new T[size];

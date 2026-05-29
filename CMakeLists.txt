@@ -11,7 +11,7 @@ set(CMAKE_CXX_EXTENSIONS False)
 
 add_executable(app 
     src/main.cpp
-    src/lanczos.cpp
+    src/matrix_solvers.cpp
 )
 
 target_include_directories(app PRIVATE include)
