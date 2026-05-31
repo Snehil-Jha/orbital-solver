@@ -90,7 +90,7 @@ public:
     int length () const { return this->size; }
 
 
-    static T complex_inner(const Vector<T>& a, const Vector<T>& b)
+    static T dot_product(const Vector<T>& a, const Vector<T>& b)
     {
         if(a.size != b.size)
             throw std::invalid_argument("lengths of vectors do not match");
@@ -98,7 +98,7 @@ public:
         T val = 0;
         for(int i = 0; i < a.size; i++)
         {
-            val += std::conj(a[i]) * b[i];
+            val += a[i] * b[i];
         }
 
         return val;

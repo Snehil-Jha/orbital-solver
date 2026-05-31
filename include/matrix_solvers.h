@@ -1,7 +1,6 @@
 #ifndef MATRIX_SOLVER_H
 #define MATRIX_SOLVER_H
 
-#include <complex>
 #include <functional>
 #include "matrix.h"
 
@@ -37,9 +36,9 @@ void bisect(
  */
 int lanczos_get_tridiagonal(
     const std::function<void(
-        const Matrix<std::complex<double>>& state, int col, Vector<std::complex<double>>& out
+        const Matrix<double>& state, int col, Vector<double>& out
     )>& H,
-    Vector<double>& T_main, Vector<double>& T_sub, Matrix<std::complex<double>>& Q,
+    Vector<double>& T_main, Vector<double>& T_sub, Matrix<double>& Q,
     double epsilon = 1e-12
 );
 

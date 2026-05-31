@@ -102,9 +102,9 @@ void bisect(
 
 int lanczos_get_tridiagonal(
     const std::function<void(
-        const Matrix<std::complex<double>>& state, int col, Vector<std::complex<double>>& out
+        const Matrix<double>& state, int col, Vector<double>& out
     )>& H,
-    Vector<double>& T_main, Vector<double>& T_sub, Matrix<std::complex<double>>& Q,
+    Vector<double>& T_main, Vector<double>& T_sub, Matrix<double>& Q,
     double epsilon
 )
 {
@@ -122,11 +122,10 @@ int lanczos_get_tridiagonal(
     double sq_sum = 0;
     for(int j = 0; j < N; j++)
     {
-        double real = dis(gen);
-        double imag = dis(gen);
+        double val = dis(gen);
 
-        Q[j, 0] = std::complex<double>(real, imag);
-        sq_sum += real * real + imag * imag;
+        Q[j, 0] = val;
+        sq_sum += val * val;
     }
 
     double normalization = 1 / sqrt(sq_sum);
@@ -137,7 +136,7 @@ int lanczos_get_tridiagonal(
 
     double beta_old = 0;
 
-    auto w = Vector<std::complex<double>>(N);
+    auto w = Vector<double>(N);
 
     // iteration loop
     for(int j = 0; j < m; j++)
@@ -154,7 +153,7 @@ int lanczos_get_tridiagonal(
             }
         }
 
-        std::complex<double> alpha_j = Q.col_inner_product(j, w);
+        double alpha_j = Q.col_dot_product(j, w);
 
         for(int i = 0; i < N; i++)
         {
@@ -164,7 +163,7 @@ int lanczos_get_tridiagonal(
         // full reorthogonalization, again with raw loops
         for(int k = 0; k < j; k++)
         {
-            std::complex<double> inner = Q.col_inner_product(k, w); 
+            double inner = Q.col_dot_product(k, w); 
             
             for(int i = 0; i < N; i++)
             {
@@ -173,9 +172,9 @@ int lanczos_get_tridiagonal(
         }
 
         // normalize and store
-        beta_old = sqrt(std::real(Vector<std::complex<double>>::complex_inner(w, w)));
+        beta_old = sqrt(std::max(0., Vector<double>::dot_product(w, w)));
         
-        T_main[j] = std::real(alpha_j); // main diagonal
+        T_main[j] = alpha_j; // main diagonal
         if(j < m-1)
         {
             T_sub[j] = beta_old;

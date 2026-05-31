@@ -3,7 +3,6 @@
 #define MATRIX_H
 
 #include <stdexcept>
-#include <complex>
 #include <string>
 #include "vector.h"
 
@@ -131,7 +130,7 @@ public:
         return vec;
     }
 
-    T col_inner_product(const int& j, const Vector<T>& vec) const
+    T col_dot_product(const int& j, const Vector<T>& vec) const
     {
         if(vec.length() != m)
             throw std::invalid_argument("invalid dimension in column multiplication");
@@ -140,7 +139,7 @@ public:
         T val = 0;
         for(int i = 0; i < m; i++)
         {
-            val += std::conj((*this)[i, j]) * vec[i];
+            val += (*this)[i, j] * vec[i];
         }
 
         return val;
