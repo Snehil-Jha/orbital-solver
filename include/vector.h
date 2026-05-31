@@ -3,7 +3,6 @@
 #define VECTOR_H
 
 #include <stdexcept>
-#include <complex>
 #include <string>
 
 template <typename T>

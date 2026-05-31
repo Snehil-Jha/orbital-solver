@@ -30,7 +30,7 @@ void bisect(
  * @param H function which applies the hermitian matrix on the specified column
  * @param T stores the tridiagonal matrix (m × m). Must be all zeros at the start
  * @param Q stores the recurrence vectors (N × m). Must be all zeros at the start
- * @param epsilon numerical precision for stopping
+ * @param epsilon numerical precision for stopping midway
  *
  * @return the number of iterations performed by the loop, typically m, but may be less
  */
@@ -41,5 +41,49 @@ int lanczos_get_tridiagonal(
     Vector<double>& T_main, Vector<double>& T_sub, Matrix<double>& Q,
     double epsilon = 1e-12
 );
+
+
+class Minres
+{
+    Vector<double> r;
+    Vector<double> v;
+    Vector<double> v_old;
+    Vector<double> v_hat;
+    Vector<double> w;
+    Vector<double> wt;
+    Vector<double> wtt;
+
+    Vector<double> Av;
+
+    const std::function<void(const Vector<double>& in, Vector<double>& out)> A;
+
+    const int N;
+
+    public:
+    /**
+     * @brief Construct a new Minres object
+     * 
+     * @param iA Function which applies A on the given vector
+     * @param iN The dimensionality of the matrix system
+     */
+    Minres(
+        const std::function<void(const Vector<double>& in, Vector<double>& out)>& iA,
+        const int iN
+    ): r(iN), v(iN), v_old(iN), v_hat(iN), w(iN), wt(iN), wtt(iN), Av(iN), A(iA), N(iN)
+    {}
+
+    /**
+     * @brief Solves the system Ax = b
+     * 
+     * @param state Matrix which contains b
+     * @param col_b the column in Q in which b is stored
+     * @param x vector to store the final output
+     * @param tol Tolerance of the solver
+     * @param max_iter Maximum number of iterations the solver will go through
+     *
+     * @returns the number of iterations taken to reach tol
+     */
+    int solve(const Matrix<double>& state, const int col_b, Vector<double>& x, const double tol = 1e-12, const int max_iter = 1000);
+};
 
 #endif
