@@ -1,67 +1,64 @@
-#include <cmath>
 #include <iostream>
 #include "vector.h"
 #include "matrix.h"
 #include "matrix_solvers.h"
 
+
 using namespace std;
 
-#define dx 0.0001220703125
-#define dx_inv 8192.
-#define x0 -4.
-#define N 65536
+#define dx 0.015625
+#define dx_inv 64.
+#define x0 -16.
+#define N 2048
 
 #define m 50
 
-void H(const Matrix<std::complex<double>>& state, int col, Vector<std::complex<double>>& out)
+void H(const Vector<double>& in, Vector<double>& out)
 {
-    double x;
-    std::complex<double> potential, kinetic;
-
+    double x, pot, kin;
     for(int i = 0; i < N; i++)
     {
         x = x0 + i * dx;
 
-        // square well
-        potential = (abs(x) < 0.5) ? 0. : 100;
+        // harmonic potential
+        pot = 0.5 * x * x;
 
+        // kinetic
         if(i == 0)
-        {
-            kinetic = -0.5 * dx_inv * dx_inv * (state[i + 2, col] - 2. * state[i + 1, col] + state[i, col]);
-        }
-        else if(i == N - 1)
-        {
-            kinetic = -0.5 * dx_inv * dx_inv * (state[i, col] - 2. * state[i - 1, col] + state[i - 2, col]);
-        }
+            kin = -0.5 * dx_inv * dx_inv * (in[i + 1] - 2 * in[i]);
+        else if (i == N - 1)
+            kin = -0.5 * dx_inv * dx_inv * (- 2 * in[i] + in[i - 1]);
         else
-        {
-            kinetic = -0.5 * dx_inv * dx_inv * (state[i + 1, col] + state[i - 1, col] - 2. * state[i, col]);
-        }
+            kin = -0.5 * dx_inv * dx_inv * (in[i + 1] - 2 * in[i] + in[i - 1]);
 
-        out[i] = potential + kinetic;
+        out[i] = pot * in[i] + kin;
     }
 }
 
 int main()
 {
-    cout << "Starting sim" << endl;
-
     auto T_main = Vector<double>(m);
     auto T_sub = Vector<double>(m - 1);
-    auto Q = Matrix<std::complex<double>>(N, m);
 
-    cout << "Initialized values" << endl;
+    auto Q = Matrix<double>(N, m);
 
-    lanczos_get_tridiagonal(H, T_main, T_sub, Q);
+    int k = 10;
+    auto result = Vector<double>(k);
 
-    cout << "Done lanczos." << endl;
-    
-    auto result = Vector<double>(m);
+    double shift = 0.49;
 
-    bisect(T_main, T_sub, 0, m-1, result);
+    cout << "Starting lanczos" << endl;
+    lanczos_invert_and_shift(H, T_main, T_sub, Q, shift);
 
-    for(int i = 0; i < m; i++)
+    cout << "Starting bisection" << endl;
+    bisect(T_main, T_sub, m-k, m-1, result);
+
+    cout << "Printing results" << endl;
+
+    for(int i = k-1; i >= 0; i--)
     {
-        cout << result[i] << endl;
+        cout << "n = " << k-i-1 << "\t\tE=" << (shift + 1./result[i]) << endl;
     }
+
+    cout << "Finished" << endl;
 }
