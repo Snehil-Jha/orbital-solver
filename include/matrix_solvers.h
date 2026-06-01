@@ -34,12 +34,29 @@ void bisect(
  *
  * @return the number of iterations performed by the loop, typically m, but may be less
  */
-int lanczos_get_tridiagonal(
+int lanczos(
     const std::function<void(
         const Matrix<double>& state, int col, Vector<double>& out
     )>& H,
     Vector<double>& T_main, Vector<double>& T_sub, Matrix<double>& Q,
     double epsilon = 1e-12
+);
+
+/**
+ * @brief fills the tridiagonal matrix and recurrence vectors
+ * 
+ * @param H function which applies the hermitian matrix on the specified column
+ * @param T stores the tridiagonal matrix (m × m). Must be all zeros at the start
+ * @param Q stores the recurrence vectors (N × m). Must be all zeros at the start
+ * @param shift the shift used for invert and shift method
+ * @param epsilon numerical precision for stopping midway
+ *
+ * @return the number of iterations performed by the loop, typically m, but may be less
+ */
+int lanczos_invert_and_shift(
+    const std::function<void(const Vector<double>& in, Vector<double>& out)>& H,
+    Vector<double>& T_main, Vector<double>& T_sub, Matrix<double>& Q,
+    const double shift, const double epsilon = 1e-12, const double tol = 1e-12, const int max_iter=1000
 );
 
 

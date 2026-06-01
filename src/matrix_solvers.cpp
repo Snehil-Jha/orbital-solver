@@ -99,7 +99,7 @@ void bisect(
     }
 }
 
-int lanczos_get_tridiagonal(
+int lanczos(
     const std::function<void(
         const Matrix<double>& state, int col, Vector<double>& out
     )>& H,
@@ -194,6 +194,32 @@ int lanczos_get_tridiagonal(
     }
 
     return m;
+}
+
+int lanczos_invert_and_shift(
+    const std::function<void(const Vector<double>& in, Vector<double>& out)>& H,
+    Vector<double>& T_main, Vector<double>& T_sub, Matrix<double>& Q,
+    const double shift, const double epsilon, const double tol, const int max_iter
+)
+{
+    int N = Q.row_count();
+
+    auto H_shift = [&shift, &H, &N](const Vector<double>& in, Vector<double>& out){
+        H(in, out);
+
+        for(int i = 0; i < N; i++)
+        {
+            out[i] -= shift * in[i];
+        }
+    };
+
+    auto solver = Minres(H_shift, N);
+
+    return lanczos([&solver, &tol, &max_iter](const Matrix<double>& state, int col, Vector<double>& out){
+
+        solver.solve(state, col, out, tol, max_iter);
+
+    }, T_main, T_sub, Q);
 }
 
 
