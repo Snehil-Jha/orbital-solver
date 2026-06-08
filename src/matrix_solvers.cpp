@@ -301,3 +301,144 @@ int Minres::solve(const Matrix<double>& state, const int col_b, Vector<double>& 
 
     return iter;
 }
+
+bool symmetric_thomas_solver(
+    const Vector<double> &main,
+    const Vector<double> &sub,
+    const Vector<double> &b,
+    Vector<double>& x,
+    Vector<double>& tmp,
+    const double epsilon
+)
+{
+    bool blow_up = false;
+
+    int n = main.length();
+    if(sub.length() != n - 1 || b.length() != n || x.length() != n || tmp.length() != n - 1)
+        throw std::invalid_argument("array size mismatch");
+
+
+    double bet = main[0];
+    if (std::abs(bet) < epsilon) { 
+        bet = (bet < 0 ? -epsilon : epsilon);
+        blow_up = true; 
+    }
+
+    tmp[0] = sub[0] / bet;
+    x[0] = b[0] / bet;
+
+    for(int j = 1; j < n - 1; j++)
+    {
+        bet = main[j] - sub[j - 1] * tmp[j - 1];
+        if (std::abs(bet) < epsilon) { 
+            bet = (bet < 0 ? -epsilon : epsilon);
+            blow_up = true; 
+        }
+
+        tmp[j] = sub[j] / bet;
+        x[j] = (b[j] - sub[j - 1] * x[j-1]) / bet;
+    }
+
+    bet = main[n-1] - sub[n-2] * tmp[n-2];
+    if (std::abs(bet) < epsilon) { 
+        bet = (bet < 0 ? -epsilon : epsilon); 
+        blow_up = true; 
+    }
+    x[n-1] = (b[n-1] - sub[n-2] * x[n-2]) / bet;
+
+
+    for(int j = n - 2; j >= 0; j--)
+    {
+        x[j] -= tmp[j] * x[j+1];
+    }
+
+    return blow_up;
+}
+
+int symmetric_tridag_rqi(
+    const double eigenvalue,
+    Vector<double> &main,
+    const Vector<double> &sub,
+
+    double& value,
+    Vector<double>& vector,
+
+    const double tolerance,
+    const int max_iter
+)
+{
+    const int n = main.length();
+    if(sub.length() != n-1 || vector.length() != n)
+        throw std::invalid_argument("array size mismatch");
+
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_real_distribution<double> dis(-1.0, 1.0);
+
+    value = eigenvalue;
+
+    // generates a random guess eigenvector
+    double vec_norm_sq = 0;
+    for(int i = 0; i < n; i++)
+    {
+        vector[i] = dis(gen);
+        vec_norm_sq += vector[i] * vector[i];
+    }
+
+    double vec_norm = sqrt(vec_norm_sq);
+
+    for(int i = 0; i < n; i++)
+    {
+        vector[i] /= vec_norm;
+    }
+
+
+    // iteration
+    auto tmp = Vector<double>(n-1);
+
+    for(int iter_count = 0; iter_count < max_iter; iter_count++)
+    {
+        // shift the main diagonal
+        for(int i = 0; i < n; i++)
+            main[i] -= value;
+
+        // solve the resulting system
+        symmetric_thomas_solver(main, sub, vector, vector, tmp);
+
+        // normalize the vector
+        vec_norm_sq = 0;
+        for(int i = 0; i < n; i++)
+            vec_norm_sq += vector[i] * vector[i];
+
+        vec_norm = sqrt(vec_norm_sq);
+        for(int i = 0; i < n; i++)
+            vector[i] /= vec_norm;        
+
+        // compute the shift to the current eigenvalue and the current residual
+        double term = main[0] * vector[0] + sub[0] * vector[1];
+        double res_sq = term * term;
+        double val_shift = vector[0] * term;
+        for(int i = 1; i < n - 1; i++)
+        {
+            term = main[i] * vector[i] + sub[i] * vector[i+1] + sub[i-1] * vector[i-1];
+            res_sq += term * term;
+            val_shift += vector[i] * term;
+        }
+        term = main[n-1] * vector[n-1] + sub[n-2] * vector[n-2];
+        res_sq += term * term;
+        val_shift += vector[n-1] * term;
+        
+        // restores the main diagonal
+        for(int i = 0; i < n; i++)
+            main[i] += value;
+
+        // update the eigenvalue
+        value += val_shift;
+
+        if(res_sq < tolerance * tolerance)
+            return iter_count;
+
+    }
+
+    return max_iter;
+}

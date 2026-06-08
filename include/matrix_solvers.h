@@ -103,4 +103,51 @@ class Minres
     int solve(const Matrix<double>& state, const int col_b, Vector<double>& x, const double tol = 1e-12, const int max_iter = 1000);
 };
 
+/**
+ * @brief Implementation of the Thomas algorithm, specifically for symmetric tridiagonal matrices Ax = b
+ * 
+ * @param main Main diagonal of the matrix A (n)
+ * @param sub Sub diagonal of the matrix A (n-1)
+ * @param b RHS of the equation (n)
+ * @param x solution of the algorithm (n)
+ * @param tmp a temporary vector needed for intermediate calculations (n - 1)
+ * @param epsilon threshold for the denominator of the solver
+ *
+ * @returns true if the system encountered a zero denominator, false otherwise
+ */
+bool symmetric_thomas_solver(
+    const Vector<double> &main,
+    const Vector<double> &sub,
+    const Vector<double> &b,
+    Vector<double>& x,
+    Vector<double>& tmp,
+    const double epsilon = 1e-16
+);
+
+/**
+ * @brief Uses the Rayleigh Quotient Iteration to find the eigenvector corresponding to the specified eigenvalue
+ * 
+ * @param eigenvalue approximate guess to the initial eigenvalue
+ * @param main main diagonal of the matrix NOTE: This will be restored in the end, but might be modified during the function call
+ * @param sub sub diagonal of the matrix
+ * @param value better approximation to the eigenvalue
+ * @param vector computed eigenvector
+ *
+ * @param tolerance margin for the residual
+ * @param max_iter maximum number of iterations the program runs for
+ *
+ * @return the number of iterations taken by the algorithm
+ */
+int symmetric_tridag_rqi(
+    const double eigenvalue,
+    Vector<double> &main,
+    const Vector<double> &sub,
+
+    double& value,
+    Vector<double>& vector,
+
+    const double tolerance = 1e-12,
+    const int max_iter = 100
+);
+
 #endif

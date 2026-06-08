@@ -1,8 +1,10 @@
+#include <cmath>
 #include <iostream>
 #include "vector.h"
 #include "matrix.h"
 #include "matrix_solvers.h"
 
+#include <random>
 
 using namespace std;
 
@@ -42,7 +44,7 @@ int main()
 
     auto Q = Matrix<double>(N, m);
 
-    int k = 10;
+    int k = 1;
     auto result = Vector<double>(k);
 
     double shift = 0.49;
@@ -59,6 +61,30 @@ int main()
     {
         cout << "n = " << k-i-1 << "\t\tE=" << (shift + 1./result[i]) << endl;
     }
+    
+    cout << "Starting RQI" << endl;
+    auto eigenstate = Vector<double>(m);
+    double eigenvalue = 0;
+    cout << "Finished RQI in " << symmetric_tridag_rqi(result[0], T_main, T_sub, eigenvalue, eigenstate) << " steps" << endl;
 
-    cout << "Finished" << endl;
+    cout << "Updated eigenvalue: " << (shift + 1./eigenvalue) << endl;
+
+    auto position_eigenstate = Vector<double>(N);
+    for(int i = 0; i < m; i++)
+    {
+        for(int j = 0; j < N; j++)
+        {
+            position_eigenstate[j] += eigenstate[i] * Q[j, i];
+        }
+    }
+
+    cout << "printing final wavefunction: " << endl;
+    cout << fixed;
+    for(int i = 0; i < N; i++)
+    {
+        cout << position_eigenstate[i] << ", ";
+    }
+    
+
+    cout << endl << "Finished" << endl;
 }
