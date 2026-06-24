@@ -2,9 +2,12 @@
 
 #include "vector.h"
 #include "matrix.h"
-#include "matrix_solvers.h"
+#include "matrix_algo.h"
+#include <stdexcept>
 
-void RadialSystem::update_potential(const std::function<double(double)>& updated_V, int updated_l)
+
+template <typename F>
+void RadialSystem::update_potential(const F&& updated_V, int updated_l)
 {
     if(updated_l != -1)
         l = updated_l;
@@ -16,45 +19,15 @@ void RadialSystem::update_potential(const std::function<double(double)>& updated
     }
 }
 
-void RadialSystem::solve_energies(const double shift, Vector<double> &energies, const int m)
+void RadialSystem::solve_energy(Vector<double> &energies)
 {
     const int k = energies.length();
 
-    auto T_main = Vector<double>(m);
-    auto T_sub = Vector<double>(m - 1);
-
-    auto Q = Matrix<double>(N, m);
-
-    auto shifted_main = Vector<double>(N);
-    for(int i = 0; i < N; i++)
-    {
-        shifted_main[i] = ham_main[i] - shift * ri_sq[i];
-    }
-
-    auto result = Vector<double>(k);
+    bisect(ham_main, ham_sub, ri_sq, 0, k-1, energies, 1e-12, 1000);
+}
 
 
-    auto H_shift_and_invert = [this, &shifted_main](const Matrix<double>& state, const int col, Vector<double>& out){
-        
-        for(int i = 0; i < N; i++)
-        {
-            out[i] = ri[i] * state[i, col];
-        }
+void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions)
+{
 
-        symmetric_thomas_solver(shifted_main, ham_sub, out, out, thomas_tmp);
-
-        for(int i = 0; i < N; i++)
-        {
-            out[i] = ri[i] * out[i];
-        }
-    };
-
-    lanczos(H_shift_and_invert, T_main, T_sub, Q);    
-
-    bisect(T_main, T_sub, m-k, m-1, result);
-
-    for(int i = 0; i < k; i++)
-    {
-        energies[i] = shift + (1. / result[k - 1 - i]);
-    }
 }

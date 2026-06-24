@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "vector.h"
+#include "matrix.h"
 
 class RadialSystem {
 
@@ -28,21 +29,20 @@ class RadialSystem {
 
     Vector<double> ham_main;
 
-    Vector<double> thomas_tmp;
 
     public:
+    template <typename F>
     RadialSystem(
         const double ir_min,
         const double ir_max,
         const int iN,
         const int il,
-        const std::function<double(double)>& V
+        const F&& V
     ): 
         r_min(ir_min), r_max(ir_max), N(iN),
         x_min(log(ir_min)), x_max(log(ir_max)), 
         dx( (x_max - x_min) / (N - 1) ), exp_dx(exp(dx)), l(il),
-        ri(N), ri_sq(N), kinetic_main(N), ham_sub(N - 1), ham_main(N),
-        thomas_tmp(N - 1)
+        ri(N), ri_sq(N), kinetic_main(N), ham_sub(N - 1), ham_main(N)
     {
 
         double xi;
@@ -73,17 +73,24 @@ class RadialSystem {
      * @param updated_V the new radial potential function
      * @param updated_l the new azimuthal number, use -1 for not changing
      */
-    void update_potential(const std::function<double(double)>& updated_V, int updated_l = -1);
+    template <typename F>
+    void update_potential(const F&& updated_V, int updated_l = -1);
 
     
     /**
-     * @brief Computes the first few eigenvalues immediately after shift.
+     * @brief Computes the first few eigenvalues of the system
      * 
-     * @param shift 
      * @param energies the energies calcualted by the solver
-     * @param m the number of iterations of the lanczos algorithm to be performed.
      */
-    void solve_energies(const double shift, Vector<double> &energies, const int m);
+    void solve_energy(Vector<double> &energies);
+    
+    /**
+     * @brief Computes the first few eigenstates of the system, the eigenvalues will be computed as well
+     * 
+     * @param energies the energies calcualted by the solver
+     * @param wavefunctions the wavefunctions calculated by the solver
+     */
+    void solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions);
 };
 
 

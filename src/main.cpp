@@ -1,42 +1,37 @@
-#include <cmath>
 #include <iostream>
 #include "vector.h"
-#include "matrix.h"
-#include "matrix_solvers.h"
 #include "system.h"
-
-#include <random>
 
 using namespace std;
 
-#define dx 0.125
-#define dx_inv 8.
-#define x0 -4.
-#define N 64
+// #define dx 0.125
+// #define dx_inv 8.
+// #define x0 -4.
+// #define N 65
 
-#define m 50
+// #define m 50
 
-void H(const Vector<double>& in, Vector<double>& out)
-{
-    double x, pot, kin;
-    for(int i = 0; i < N; i++)
-    {
-        x = x0 + i * dx;
+// void H(const Vector<double>& in, Vector<double>& out)
+// {
+//     double x, pot, kin;
+//     for(int i = 0; i < N; i++)
+//     {
+//         x = x0 + i * dx;
 
-        // harmonic potential
-        pot = 0.5 * x * x;
+//         // harmonic potential
+//         pot = 0.5 * x * x;
 
-        // kinetic
-        if(i == 0)
-            kin = -0.5 * dx_inv * dx_inv * (in[i + 1] - 2 * in[i]);
-        else if (i == N - 1)
-            kin = -0.5 * dx_inv * dx_inv * (- 2 * in[i] + in[i - 1]);
-        else
-            kin = -0.5 * dx_inv * dx_inv * (in[i + 1] - 2 * in[i] + in[i - 1]);
+//         // kinetic
+//         if(i == 0)
+//             kin = -0.5 * dx_inv * dx_inv * (in[i + 1] - 2 * in[i]);
+//         else if (i == N - 1)
+//             kin = -0.5 * dx_inv * dx_inv * (- 2 * in[i] + in[i - 1]);
+//         else
+//             kin = -0.5 * dx_inv * dx_inv * (in[i + 1] - 2 * in[i] + in[i - 1]);
 
-        out[i] = pot * in[i] + kin;
-    }
-}
+//         out[i] = pot * in[i] + kin;
+//     }
+// }
 
 // int main()
 // {
@@ -66,7 +61,7 @@ void H(const Vector<double>& in, Vector<double>& out)
 //     cout << "Starting RQI" << endl;
 //     auto eigenstate = Vector<double>(m);
 //     double eigenvalue = 0;
-//     cout << "Finished RQI in " << symmetric_tridag_rqi(result[0], T_main, T_sub, eigenvalue, eigenstate) << " steps" << endl;
+//     cout << "Finished RQI in " << symmetric_tridag_rqi(result[2], T_main, T_sub, eigenvalue, eigenstate) << " steps" << endl;
 
 //     cout << "Updated eigenvalue: " << (shift + 1./eigenvalue) << endl;
 
@@ -93,13 +88,13 @@ void H(const Vector<double>& in, Vector<double>& out)
 int main()
 {
     auto system = RadialSystem(
-        1e-5, 50., 1000, 0, [](double r){
+        1e-12, 120., 10000, 0, [](double r){
             return -1. / r;
         }
     );
 
     auto energies = Vector<double>(5);
-    system.solve_energies(-0.126, energies, 50);
+    system.solve_energy(energies);
 
     for(int i = 0; i < 5; i++)
     {

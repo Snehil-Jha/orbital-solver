@@ -11,8 +11,12 @@ set(CMAKE_CXX_EXTENSIONS False)
 
 add_executable(app 
     src/main.cpp
-    src/matrix_solvers.cpp
     src/system.cpp
+    src/algorithms/bisect.cpp
+    src/algorithms/rqi.cpp
+    src/algorithms/thomas.cpp
+    src/algorithms/lanczos.cpp
+    src/algorithms/minres.cpp
 )
 
 target_include_directories(app PRIVATE include)
