@@ -91,6 +91,15 @@ class RadialSystem {
      * @param wavefunctions the wavefunctions calculated by the solver
      */
     void solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions);
+    
+
+    /**
+     * @brief provides the value of the radial coordinate corresponding to that index
+     * 
+     * @param index 
+     * @return double 
+     */
+    double radial_coordinate(int index);
 };
 
 
