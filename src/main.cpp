@@ -1,46 +1,34 @@
 #include <iostream>
-#include <fstream>
-#include <ostream>
-
-#include "vector.h"
-#include "system.h"
-
+#include "dft.h"
 using namespace std;
 
 int main()
 {
-    int N = 10000;
-    int m = 4;
-    int k = 2;
+    int Z = 3;
+    auto atom = DFT(Z, Z, 1e-10, 100, 10000);
 
-    auto system = RadialSystem(
-        1e-12, 150., N, 0, [](double r){
-            return -1. / r;
-        }
-    );
+    cout << "Initialized Atom: Z = " << Z << endl;
 
-    auto energies = Vector<double>(m);
-    auto wavefunctions = Matrix<double>(m, N);
-    system.solve_wavefunction(energies, wavefunctions);
+    double energy = 0;
+    atom.compute_ground_state(energy, 0.01);
+    cout << "Computed Energy: " << energy;
 
-    for(int i = 0; i < m; i++)
-    {
-        cout << "E = " << energies[i] << '\t';
-        cout << 1. / (2 * (i + 1) * (i + 1)) << endl;
-    }
+    atom.print_status();
 
-    ofstream outputFile("data.csv");
+    return 0;
 
-    if (outputFile.is_open()) {
-        outputFile << "r,psi\n";
+    // RadialSystem hydrogen(1e-10, 150, 10000, 0, [](double r){return - 1.0/r;});
 
-        for (int i = 0; i < N; i++) {
-            outputFile << system.radial_coordinate(i) << "," << wavefunctions[k, i] << "\n";
-        }
+    // Vector<double> energies(5);
+    // Matrix<double> wave(5, 10000);
 
-        outputFile.close();
-        cout << "Data successfully exported to data.csv" << endl;
-    } else {
-        cerr << "Failed to open file for writing." << endl;
-    }
+    // cout << "starting solver" << endl;
+    // // hydrogen.solve_energy(energies);
+    // hydrogen.solve_wavefunction(energies, wave);
+    // cout << "ended solver" << endl;
+
+    // for(int i = 0; i < 5; i++)
+    // {
+    //     cout << i << '\t' << energies[i] << endl;
+    // }
 }

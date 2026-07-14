@@ -17,6 +17,7 @@ add_executable(app
     src/algorithms/thomas.cpp
     src/algorithms/lanczos.cpp
     src/algorithms/minres.cpp
+    src/dft.cpp
 )
 
 target_include_directories(app PRIVATE include)

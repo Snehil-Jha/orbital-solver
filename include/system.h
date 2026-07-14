@@ -2,10 +2,11 @@
 #define SYSTEM_H
 
 #include <cmath>
-#include <functional>
 
 #include "vector.h"
 #include "matrix.h"
+
+class DFT;
 
 class RadialSystem {
 
@@ -27,10 +28,13 @@ class RadialSystem {
     Vector<double> kinetic_main;
     Vector<double> ham_sub;
 
+    Vector<double> pot_main;
     Vector<double> ham_main;
 
 
     public:
+    friend class DFT;
+
     template <typename F>
     RadialSystem(
         const double ir_min,
@@ -42,7 +46,7 @@ class RadialSystem {
         r_min(ir_min), r_max(ir_max), N(iN),
         x_min(log(ir_min)), x_max(log(ir_max)), 
         dx( (x_max - x_min) / (N - 1) ), exp_dx(exp(dx)), l(il),
-        ri(N), ri_sq(N), kinetic_main(N), ham_sub(N - 1), ham_main(N)
+        ri(N), ri_sq(N), kinetic_main(N), ham_sub(N - 1), pot_main(N), ham_main(N)
     {
 
         double xi;
@@ -54,7 +58,8 @@ class RadialSystem {
             ri_sq[i] = ri[i] * ri[i];
 
             kinetic_main[i] = 0.125 + (1 / (dx * dx));
-            ham_main[i] = kinetic_main[i] + ri_sq[i] * V(ri[i]) + 0.5 * l * (l + 1);
+            pot_main[i] = ri_sq[i] * V(ri[i]);
+            ham_main[i] = kinetic_main[i] + pot_main[i] + 0.5 * l * (l + 1);
             ham_sub[i] = -0.5 / (dx * dx);
         }
 
@@ -63,7 +68,8 @@ class RadialSystem {
         ri_sq[i] = ri[i] * ri[i];
 
         kinetic_main[i] = 0.125 + (1 / (dx * dx));
-        ham_main[i] = kinetic_main[i] + ri_sq[i] * V(ri[i]) + 0.5 * l * (l + 1);
+        pot_main[i] = ri_sq[i] * V(ri[i]);
+        ham_main[i] = kinetic_main[i] + pot_main[i] + 0.5 * l * (l + 1);
     }
 
 
@@ -78,11 +84,19 @@ class RadialSystem {
 
     
     /**
+     * @brief Changes just the azimuthal number of the solver, without re-computing the potential energy
+     * 
+     * @param updated_l the new azimuthal number
+     */
+    void update_azimuthal(int updated_l);
+
+    
+    /**
      * @brief Computes the first few eigenvalues of the system
      * 
      * @param energies the energies calcualted by the solver
      */
-    void solve_energy(Vector<double> &energies);
+    const void solve_energy(Vector<double> &energies);
     
     /**
      * @brief Computes the first few eigenstates of the system, the eigenvalues will be computed as well
@@ -90,7 +104,7 @@ class RadialSystem {
      * @param energies the energies calcualted by the solver
      * @param wavefunctions the wavefunctions calculated by the solver
      */
-    void solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions);
+    const void solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions, int index_start = 0, int state_count = -1);
     
 
     /**
@@ -99,7 +113,7 @@ class RadialSystem {
      * @param index 
      * @return double 
      */
-    double radial_coordinate(int index);
+    const double radial_coordinate(int index);
 };
 
 

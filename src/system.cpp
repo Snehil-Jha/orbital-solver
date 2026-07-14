@@ -16,34 +16,49 @@ void RadialSystem::update_potential(const F&& updated_V, int updated_l)
 
     for(int i = 0; i < N; i++)
     {
-        ham_main[i] = kinetic_main[i] + ri_sq[i] * updated_V(ri[i]) + 0.5 * l * (l + 1);
+        pot_main[i] = ri_sq[i] * updated_V(ri[i]);
+        ham_main[i] = kinetic_main[i] + pot_main[i] + 0.5 * l * (l + 1);
     }
 }
 
-void RadialSystem::solve_energy(Vector<double> &energies)
+
+void RadialSystem::update_azimuthal(int updated_l)
+{
+    l = updated_l;
+
+    for(int i = 0; i < N; i++)
+    {
+        ham_main[i] = kinetic_main[i] + pot_main[i] + 0.5 * l * (l + 1);
+    }
+}
+
+
+const void RadialSystem::solve_energy(Vector<double> &energies)
 {
     const int k = energies.length();
 
     bisect(ham_main, ham_sub, ri_sq, 0, k-1, energies, 1e-12, 1000);
 }
 
-
-void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions)
+const void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions, int index_start, int state_count)
 {
-    const int k_energy = energies.length();
-    const int k_state = wavefunctions.row_count();
+    if(state_count == -1)
+    {
+        if(wavefunctions.row_count() != energies.length())
+            throw std::invalid_argument("invalid matrix size");
+        state_count = energies.length();
+    }
 
-    if(wavefunctions.col_count() != N || k_energy < k_state)
-        throw std::invalid_argument("invalid matrix size");
+    auto energies_bisect = Vector<double>(state_count);
 
-    bisect(ham_main, ham_sub, ri_sq, 0, k_energy - 1, energies, 1e-12, 1000);
+    bisect(ham_main, ham_sub, ri_sq, 0, state_count - 1, energies_bisect, 1e-12, 1000);
 
     auto current_eigenvector = Vector<double>(N);
 
-    for (int i = 0; i < k_state; i++)
+    for (int i = index_start; i < index_start + state_count; i++)
     {
         // solve for the wavefunction
-        double current_energy = energies[i];
+        double current_energy = energies_bisect[i - index_start];
 
         symmetric_tridag_rqi(
             current_energy,
@@ -57,7 +72,7 @@ void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &
         );
         
         // Gram-Schmidt to reduce numerical errors
-        for(int lower = 0; lower < i; lower++)
+        for(int lower = index_start; lower < i; lower++)
         {
             double overlap = 0;
             for(int j = 0; j < N; j++)
@@ -77,7 +92,7 @@ void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &
         {
             norm_sq += current_eigenvector[j] * current_eigenvector[j] * ri_sq[j];
         }
-        double norm = sqrt(norm_sq);
+        double norm = sqrt(norm_sq * dx);
         for(int j = 0; j < N; j++)
         {
             current_eigenvector[j] /= norm;
@@ -93,7 +108,7 @@ void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &
 
             final_energy += current_eigenvector[j] * H_psi;
         }
-        energies[i] = final_energy;
+        energies[i] = final_energy * dx;
 
         for(int j = 0; j < N; j++)
         {
@@ -102,7 +117,7 @@ void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &
     }
 }
 
-double RadialSystem::radial_coordinate(int index)
+const double RadialSystem::radial_coordinate(int index)
 {
     return exp(x_min + index * dx);
 }
