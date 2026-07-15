@@ -136,8 +136,18 @@ class DFT {
      * @param energy ground state energy as computed by the solver
      * @param max_iter the maximum number of iterations the solver will run for
      * @param residual_tol the tolerance factor for the difference norm between two iterations
+     *
+     * @returns The iteration count and final residual obtained by the solver
      */
-    void compute_ground_state(double &energy, const double mixing=0.3, const int max_iter = 8192, const double residual_tol = 1e-8);
+    std::pair<int, double> compute_ground_state(double &energy, const double mixing=0.3, const int max_iter = 8192, const double residual_tol = 1e-8);
+
+    void get_occupation(int& s_up, int& s_down, int& p_up, int& p_down)
+    {
+        s_up = occupation.s_up;
+        s_down = occupation.s_down;
+        p_up = occupation.p_up;
+        p_down = occupation.p_down;
+    }
 };
 
 #endif

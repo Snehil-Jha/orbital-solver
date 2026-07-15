@@ -249,7 +249,7 @@ void DFT::compute_density(double& residual, const double mixing)
     residual = sqrt(residual);
 }
 
-void DFT::compute_ground_state(double& energy, const double mixing, const int max_iter, const double residual_tol)
+std::pair<int, double> DFT::compute_ground_state(double& energy, const double mixing, const int max_iter, const double residual_tol)
 {
     double residual = 0;
 
@@ -257,19 +257,24 @@ void DFT::compute_ground_state(double& energy, const double mixing, const int ma
     randomize_wavefunctions();
 
     initialize_density();
-    for(int iter_number = 0; iter_number < max_iter; iter_number++)
+    int iter_number;
+    for(iter_number = 0; iter_number < max_iter; iter_number++)
     {
         solve_poisson();
         
         setup_xc_potential();
 
-        solve_schrodinger();
+        // stops updating occupation count and energies after 500 iterations
+        // the energies automatically get updated during RQI anyways
+        if(iter_number < 500)
+            solve_schrodinger();
 
         compute_density(residual, mixing);
         
-        std::cout << "iteration: " << iter_number << "\t residual: " << residual
-           << "\t occ: " << occupation.s_up << "," << occupation.s_down
-           << "," << occupation.p_up << "," << occupation.p_down << std::endl;
+        if(iter_number % 100 == 0)
+            std::cout << "Z: " << Z << "\t iteration: " << iter_number << "\t residual: " << residual
+                << "\t occ: " << occupation.s_up << "," << occupation.s_down
+                << "," << occupation.p_up << "," << occupation.p_down << std::endl;
 
 
         if(residual < residual_tol)
@@ -318,4 +323,6 @@ void DFT::compute_ground_state(double& energy, const double mixing, const int ma
     }
 
     energy = E_eig + E_hartree_correction + E_x_correction + E_c_correction;
+
+    return std::pair(iter_number, residual);
 }
