@@ -57,8 +57,13 @@ class DFT {
     Vector<double> density_down;
     
     // LDA
-    Vector<double> V_xc_up;
-    Vector<double> V_xc_down;
+    Vector<double> V_x_up;
+    Vector<double> V_x_down;
+
+    // Chachiyo (2016)
+    Vector<double> epsilon_c;
+    Vector<double> V_c_up;
+    Vector<double> V_c_down;
     
 
     // occupation states
@@ -90,9 +95,10 @@ class DFT {
      * @brief Sets the internal potential for the system
      * 
      * @param l the azimuthal quantum number to be used
-     * @param exchange_potential the exchange potential to be used 
+     * @param exchange_potential the exchange potential to be used (scaled by 1/r)
+     * @param correlation_potential the correlation potential to be used
      */
-    void set_system_potential(int l, const Vector<double>& exchange_potential);
+    void set_system_potential(int l, const Vector<double>& exchange_potential, const Vector<double>& correlation_potential);
 
     /**
      * @brief Solves for the eigenvalues of the schrodinger equation
@@ -119,7 +125,8 @@ class DFT {
         Z(iZ), N(iN), Ne(iNe), system(ir_min, ir_max, iN, 0, [iZ](double r){return - iZ / r;}),
         V_hatree(N), poisson_back(N),
         density(N), density_up(N), density_down(N),
-        V_xc_up(N), V_xc_down(N),
+        V_x_up(N), V_x_down(N),
+        epsilon_c(N), V_c_up(N), V_c_down(N),
         occupation(iNe, iN)
     {}
 

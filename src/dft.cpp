@@ -2,6 +2,7 @@
 #include <cmath>
 
 #include <iostream>
+#include <numbers>
 #include <random>
 
 void DFT::randomize_wavefunctions()
@@ -77,9 +78,15 @@ void DFT::solve_poisson()
 
 void DFT::setup_xc_potential()
 {
-    // note that this is not the actual LSDA potential, but rather a scaled version which will be fixed later
+    // from Chachiyo (2016)
+    constexpr double a0 = (std::numbers::ln2 - 1) / (2 * std::numbers::pi * std::numbers::pi);
+    constexpr double b0 = 20.4562557;
+    constexpr double a1 = a0 / 2;
+    constexpr double b1 = 27.4203609;
+
     for(int i = 0; i < N; i++)
     {
+        // note that this is not the actual LSDA potential, but rather a scaled version which will be fixed later
         if(density_up[i] < 0)
         {
             std::cout << "negative density_up[" << i << "]" << std::endl;
@@ -89,12 +96,38 @@ void DFT::setup_xc_potential()
             std::cout << "negative density_down[" << i << "]" << std::endl;
         }
 
-        V_xc_up[i] = xc_norm * pow(std::max(density_up[i],   0.0), 1. / 3.);
-        V_xc_down[i] = xc_norm * pow(std::max(density_down[i],   0.0), 1. / 3.);
+        V_x_up[i] = xc_norm * cbrt(std::max(density_up[i],   0.0));
+        V_x_down[i] = xc_norm * cbrt(std::max(density_down[i],   0.0));
+
+
+        // correlation term, Chachiyo (2016)
+        double density_clamp = std::max(density[i], 1e-300);
+
+        double zeta = std::clamp((density_up[i] - density_down[i]) / density_clamp, -1. + 1e-12, 1. - 1e-12);
+
+        double rs = system.ri[i] * cbrt(3. / density_clamp);
+
+        double epsilon_c0 = a0 * std::log(1 + (b0 / rs) * (1 + (1 / rs)));
+        double epsilon_c1 = a1 * std::log(1 + (b1 / rs) * (1 + (1 / rs)));
+
+        double epsilon_c0_diff = - (a0 * b0 * (rs + 2)) / (rs * (rs * rs + b0 * rs + b0));
+        double epsilon_c1_diff = - (a1 * b1 * (rs + 2)) / (rs * (rs * rs + b1 * rs + b1));
+
+        double g = 0.5 * ( cbrt(1 + 2 * zeta + zeta * zeta) + cbrt(1 - 2 * zeta + zeta * zeta));
+        double f = 2 * (1 - g * g * g);
+        
+        double g_diff = ((1 / cbrt(1 + zeta)) - (1 / cbrt(1 - zeta))) / 3;
+        double f_diff = - 6 * g * g * g_diff;
+
+        epsilon_c[i] = epsilon_c0 + (epsilon_c1 - epsilon_c0) * f;
+
+        double correlation = epsilon_c[i] - (rs * (epsilon_c0_diff + (epsilon_c1_diff - epsilon_c0_diff) * f) / 3);
+        V_c_up[i] = correlation + (epsilon_c1 - epsilon_c0) * f_diff * (2 * density_down[i]) / (density_clamp);
+        V_c_down[i] = correlation - (epsilon_c1 - epsilon_c0) * f_diff * (2 * density_up[i]) / (density_clamp);
     }   
 }
 
-void DFT::set_system_potential(int l, const Vector<double>& exchange_potential)
+void DFT::set_system_potential(int l, const Vector<double>& exchange_potential, const Vector<double>& correlation_potential)
 {
     system.l = l;
     for(int i = 0; i < N; i++)
@@ -103,7 +136,7 @@ void DFT::set_system_potential(int l, const Vector<double>& exchange_potential)
             system.kinetic_main[i] +
             system.pot_main[i] +
             0.5 * l * (l + 1) +
-            system.ri_sq[i] * V_hatree[i] +
+            system.ri_sq[i] * (V_hatree[i] + correlation_potential[i]) +
             system.ri[i] * exchange_potential[i];
     }
 }
@@ -111,16 +144,16 @@ void DFT::set_system_potential(int l, const Vector<double>& exchange_potential)
 void DFT::solve_schrodinger()
 {
     // computes all the possible energy states
-    set_system_potential(0, V_xc_up);
+    set_system_potential(0, V_x_up, V_c_up);
     system.solve_energy(occupation.energies_s_up);
 
-    set_system_potential(0, V_xc_down);
+    set_system_potential(0, V_x_down, V_c_down);
     system.solve_energy(occupation.energies_s_down);
 
-    set_system_potential(1, V_xc_up);
+    set_system_potential(1, V_x_up, V_c_up);
     system.solve_energy(occupation.energies_p_up);
     
-    set_system_potential(1, V_xc_down);
+    set_system_potential(1, V_x_down, V_c_down);
     system.solve_energy(occupation.energies_p_down);
 
     // resets the occupation
@@ -163,7 +196,7 @@ void DFT::solve_schrodinger()
 void DFT::compute_density(double& residual, const double mixing)
 {
     auto add_from_state = [this](
-        const Vector<double>& exchange_potential,
+        const Vector<double>& exchange_potential, const Vector<double>& correlation_potential,
         Vector<double>& energies, Matrix<double>& wavefunctions, 
         int occupation_count, int degeneracy, int l,
         Vector<double>& updating_density
@@ -173,7 +206,7 @@ void DFT::compute_density(double& residual, const double mixing)
 
         int maximum_state = ceil((1. * occupation_count) / degeneracy);
 
-        set_system_potential(l, exchange_potential);
+        set_system_potential(l, exchange_potential, correlation_potential);
         system.solve_wavefunction(energies, wavefunctions, 0, maximum_state, true);
 
         for(int state = 0; state < maximum_state; state++)
@@ -192,11 +225,11 @@ void DFT::compute_density(double& residual, const double mixing)
     }
 
 
-    add_from_state(V_xc_up, occupation.energies_s_up, occupation.wavefunctions_s_up, occupation.s_up, 1, 0, occupation.new_density_up);
-    add_from_state(V_xc_down, occupation.energies_s_down, occupation.wavefunctions_s_down, occupation.s_down, 1, 0, occupation.new_density_down);
+    add_from_state(V_x_up, V_c_up, occupation.energies_s_up, occupation.wavefunctions_s_up, occupation.s_up, 1, 0, occupation.new_density_up);
+    add_from_state(V_x_down, V_c_down, occupation.energies_s_down, occupation.wavefunctions_s_down, occupation.s_down, 1, 0, occupation.new_density_down);
     
-    add_from_state(V_xc_up, occupation.energies_p_up, occupation.wavefunctions_p_up, occupation.p_up, 3, 1, occupation.new_density_up);
-    add_from_state(V_xc_down, occupation.energies_p_down, occupation.wavefunctions_p_down, occupation.p_down, 3, 1, occupation.new_density_down);
+    add_from_state(V_x_up, V_c_up, occupation.energies_p_up, occupation.wavefunctions_p_up, occupation.p_up, 3, 1, occupation.new_density_up);
+    add_from_state(V_x_down, V_c_down, occupation.energies_p_down, occupation.wavefunctions_p_down, occupation.p_down, 3, 1, occupation.new_density_down);
 
     residual = 0;
     for(int i = 0; i < N; i++)
@@ -264,7 +297,8 @@ void DFT::compute_ground_state(double& energy, const double mixing, const int ma
     }
 
     double E_hartree_correction = 0;
-    double E_xc_correction = 0;
+    double E_x_correction = 0;
+    double E_c_correction = 0;
 
     // trapezoidal integration
     for(int i = 0; i < N; i++)
@@ -274,11 +308,14 @@ void DFT::compute_ground_state(double& energy, const double mixing, const int ma
 
         E_hartree_correction -= 0.5 * V_hatree[i] * density[i] * weight;
 
-        double V_xc_phys_up   = V_xc_up[i] / system.ri[i];
-        double V_xc_phys_down = V_xc_down[i] / system.ri[i];
+        double V_xc_phys_up   = V_x_up[i] / system.ri[i];
+        double V_xc_phys_down = V_x_down[i] / system.ri[i];
 
-        E_xc_correction -= 0.25 * (V_xc_phys_up * density_up[i] + V_xc_phys_down * density_down[i]) * weight;
+        E_x_correction -= 0.25 * (V_xc_phys_up * density_up[i] + V_xc_phys_down * density_down[i]) * weight;
+
+        E_c_correction += epsilon_c[i] * density[i] * weight;
+        E_c_correction -= (V_c_up[i] * density_up[i] + V_c_down[i] * density_down[i]) * weight;
     }
 
-    energy = E_eig + E_hartree_correction + E_xc_correction;
+    energy = E_eig + E_hartree_correction + E_x_correction + E_c_correction;
 }
