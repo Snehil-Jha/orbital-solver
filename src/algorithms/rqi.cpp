@@ -100,32 +100,39 @@ int symmetric_tridag_rqi(
     Vector<double>& vector,
 
     const double tolerance,
-    const int max_iter
+    const int max_iter,
+
+    const bool warm_start
 )
 {
     const int n = main.length();
     if(sub.length() != n-1 || vector.length() != n)
         throw std::invalid_argument("array size mismatch");
 
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    static std::uniform_real_distribution<double> dis(-1.0, 1.0);
-
+    
     value = eigenvalue;
-
-    // generates a random guess eigenvector
+    
+    
     double vec_norm_sq = 0;
-    for(int i = 0; i < n; i++)
+    double vec_norm = 0;
+    if(!warm_start)
     {
-        vector[i] = dis(gen);
-        vec_norm_sq +=  weight[i] * vector[i] * vector[i];
-    }
-
-    double vec_norm = sqrt(vec_norm_sq);
-
-    for(int i = 0; i < n; i++)
-    {
-        vector[i] /= vec_norm;
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_real_distribution<double> dis(-1.0, 1.0);
+        // generates a random guess eigenvector
+        for(int i = 0; i < n; i++)
+        {
+            vector[i] = dis(gen);
+            vec_norm_sq +=  weight[i] * vector[i] * vector[i];
+        }
+        
+        vec_norm = sqrt(vec_norm_sq);
+    
+        for(int i = 0; i < n; i++)
+        {
+            vector[i] /= vec_norm;
+        }
     }
 
 

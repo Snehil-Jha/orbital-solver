@@ -40,7 +40,7 @@ const void RadialSystem::solve_energy(Vector<double> &energies)
     bisect(ham_main, ham_sub, ri_sq, 0, k-1, energies, 1e-12, 1000);
 }
 
-const void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions, int index_start, int state_count)
+const void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions, const int index_start, int state_count, const bool warm_start)
 {
     if(state_count == -1)
     {
@@ -59,6 +59,14 @@ const void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<dou
     {
         // solve for the wavefunction
         double current_energy = energies_bisect[i - index_start];
+        
+        if(warm_start)
+        {
+            for(int j = 0; j < N; j++)
+            {
+                current_eigenvector[j] = wavefunctions[i, j];
+            }
+        }
 
         symmetric_tridag_rqi(
             current_energy,
@@ -68,7 +76,9 @@ const void RadialSystem::solve_wavefunction(Vector<double> &energies, Matrix<dou
             
             current_energy, current_eigenvector,
 
-            1e-12, 1000
+            1e-12, 1000,
+
+            warm_start
         );
         
         // Gram-Schmidt to reduce numerical errors

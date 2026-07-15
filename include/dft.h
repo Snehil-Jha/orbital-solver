@@ -3,8 +3,6 @@
 
 #include "system.h"
 
-#include<iostream>
-
 class DFT {
     private:
 
@@ -22,7 +20,10 @@ class DFT {
         Vector<double> energies_p_down;
 
         Vector<double> energies;
-        Matrix<double> wavefunctions;
+        Matrix<double> wavefunctions_s_up;
+        Matrix<double> wavefunctions_s_down;
+        Matrix<double> wavefunctions_p_up;
+        Matrix<double> wavefunctions_p_down;
 
         Vector<double> new_density_up;
         Vector<double> new_density_down;
@@ -30,7 +31,11 @@ class DFT {
         OccupationState(int iNe, int iN):
             energies_s_up(iNe), energies_s_down(iNe),
             energies_p_up(1 + ceil(iNe / 3.)), energies_p_down(1 + ceil(iNe / 3.)),
-            energies(iNe), wavefunctions(iNe, iN),
+            energies(iNe), 
+            wavefunctions_s_up(iNe, iN),
+            wavefunctions_s_down(iNe, iN),
+            wavefunctions_p_up(1 + ceil(iNe / 3.), iN),
+            wavefunctions_p_down(1 + ceil(iNe / 3.), iN),
             new_density_up(iN), new_density_down(iN)
         {}
     };
@@ -58,6 +63,12 @@ class DFT {
 
     // occupation states
     OccupationState occupation;
+
+    /**
+     * @brief Randomizes the wavefunctions stored to allow for warm starts
+     * 
+     */
+    void randomize_wavefunctions();
 
     /**
      * @brief Initializes the density to the independent hydrogenic case
@@ -120,16 +131,6 @@ class DFT {
      * @param residual_tol the tolerance factor for the difference norm between two iterations
      */
     void compute_ground_state(double &energy, const double mixing=0.3, const int max_iter = 8192, const double residual_tol = 1e-8);
-
-
-    void print_status()
-    {
-        std::cout << occupation.s_up << std::endl;
-        std::cout << occupation.s_down << std::endl;
-        std::cout << occupation.p_up << std::endl;
-        std::cout << occupation.p_down << std::endl;
-
-    }
 };
 
 #endif

@@ -103,8 +103,11 @@ class RadialSystem {
      * 
      * @param energies the energies calcualted by the solver
      * @param wavefunctions the wavefunctions calculated by the solver
+     * @param index_start the column index of the wavefunction to start at
+     * @param state_count the number of states to solve for
+     * @param warm_start uses the wavefunctions present in the matrix to initialize the solvers
      */
-    const void solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions, int index_start = 0, int state_count = -1);
+    const void solve_wavefunction(Vector<double> &energies, Matrix<double> &wavefunctions, const int index_start = 0, int state_count = -1, const bool warm_start=false);
     
 
     /**

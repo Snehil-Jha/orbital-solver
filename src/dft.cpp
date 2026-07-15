@@ -1,6 +1,30 @@
 #include "dft.h"
 #include <cmath>
 
+#include <iostream>
+#include <random>
+
+void DFT::randomize_wavefunctions()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dis(-1.0, 1.0);
+
+    for(int j = 0; j < N; j++)
+    {
+        for(int i = 0; i < Ne; i++)
+        {
+            occupation.wavefunctions_s_up[i, j] = dis(gen);
+            occupation.wavefunctions_s_down[i, j] = dis(gen);
+        }
+        for(int i = 0; i < 1 + ceil(Ne / 3.); i++)
+        {
+            occupation.wavefunctions_p_up[i, j] = dis(gen);
+            occupation.wavefunctions_p_down[i, j] = dis(gen);
+        }
+    }
+}
+
 void DFT::initialize_density()
 {
     // start with an initial guess of hydrogenic density, scaled properly for a logarithmic grid
@@ -56,8 +80,17 @@ void DFT::setup_xc_potential()
     // note that this is not the actual LSDA potential, but rather a scaled version which will be fixed later
     for(int i = 0; i < N; i++)
     {
-        V_xc_up[i] = xc_norm * pow(density_up[i], 1. / 3.);
-        V_xc_down[i] = xc_norm * pow(density_down[i], 1. / 3.);
+        if(density_up[i] < 0)
+        {
+            std::cout << "negative density_up[" << i << "]" << std::endl;
+        }
+        if(density_down[i] < 0)
+        {
+            std::cout << "negative density_down[" << i << "]" << std::endl;
+        }
+
+        V_xc_up[i] = xc_norm * pow(std::max(density_up[i],   0.0), 1. / 3.);
+        V_xc_down[i] = xc_norm * pow(std::max(density_down[i],   0.0), 1. / 3.);
     }   
 }
 
@@ -141,7 +174,7 @@ void DFT::compute_density(double& residual, const double mixing)
         int maximum_state = ceil((1. * occupation_count) / degeneracy);
 
         set_system_potential(l, exchange_potential);
-        system.solve_wavefunction(energies, wavefunctions, 0, maximum_state);
+        system.solve_wavefunction(energies, wavefunctions, 0, maximum_state, true);
 
         for(int state = 0; state < maximum_state; state++)
         {
@@ -159,11 +192,11 @@ void DFT::compute_density(double& residual, const double mixing)
     }
 
 
-    add_from_state(V_xc_up, occupation.energies_s_up, occupation.wavefunctions, occupation.s_up, 1, 0, occupation.new_density_up);
-    add_from_state(V_xc_down, occupation.energies_s_down, occupation.wavefunctions, occupation.s_down, 1, 0, occupation.new_density_down);
+    add_from_state(V_xc_up, occupation.energies_s_up, occupation.wavefunctions_s_up, occupation.s_up, 1, 0, occupation.new_density_up);
+    add_from_state(V_xc_down, occupation.energies_s_down, occupation.wavefunctions_s_down, occupation.s_down, 1, 0, occupation.new_density_down);
     
-    add_from_state(V_xc_up, occupation.energies_p_up, occupation.wavefunctions, occupation.p_up, 3, 1, occupation.new_density_up);
-    add_from_state(V_xc_down, occupation.energies_p_down, occupation.wavefunctions, occupation.p_down, 3, 1, occupation.new_density_down);
+    add_from_state(V_xc_up, occupation.energies_p_up, occupation.wavefunctions_p_up, occupation.p_up, 3, 1, occupation.new_density_up);
+    add_from_state(V_xc_down, occupation.energies_p_down, occupation.wavefunctions_p_down, occupation.p_down, 3, 1, occupation.new_density_down);
 
     residual = 0;
     for(int i = 0; i < N; i++)
@@ -185,7 +218,10 @@ void DFT::compute_density(double& residual, const double mixing)
 
 void DFT::compute_ground_state(double& energy, const double mixing, const int max_iter, const double residual_tol)
 {
-    double residual;
+    double residual = 0;
+
+    // TODO:
+    randomize_wavefunctions();
 
     initialize_density();
     for(int iter_number = 0; iter_number < max_iter; iter_number++)
@@ -195,13 +231,16 @@ void DFT::compute_ground_state(double& energy, const double mixing, const int ma
         setup_xc_potential();
 
         solve_schrodinger();
-        
+
         compute_density(residual, mixing);
+        
+        std::cout << "iteration: " << iter_number << "\t residual: " << residual
+           << "\t occ: " << occupation.s_up << "," << occupation.s_down
+           << "," << occupation.p_up << "," << occupation.p_down << std::endl;
+
 
         if(residual < residual_tol)
             break;
-
-        std::cout << "iteration: " << iter_number << "\t residual: " << residual << std::endl;
     }
 
     // compute the final energy

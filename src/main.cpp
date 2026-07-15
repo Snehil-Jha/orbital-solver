@@ -4,16 +4,15 @@ using namespace std;
 
 int main()
 {
-    int Z = 3;
-    auto atom = DFT(Z, Z, 1e-10, 100, 10000);
+    int Z = 6;
+    auto atom = DFT(Z, Z, 1e-10, 30, 1000);
 
     cout << "Initialized Atom: Z = " << Z << endl;
 
     double energy = 0;
     atom.compute_ground_state(energy, 0.01);
-    cout << "Computed Energy: " << energy;
+    cout << "Computed Energy: " << energy << endl;
 
-    atom.print_status();
 
     return 0;
 

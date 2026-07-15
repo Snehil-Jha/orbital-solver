@@ -118,7 +118,9 @@ int symmetric_tridag_rqi(
     Vector<double>& vector,
 
     const double tolerance = 1e-12,
-    const int max_iter = 100
+    const int max_iter = 100,
+
+    const bool warm_start=false
 );
 
 /**
